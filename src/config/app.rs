@@ -1,8 +1,10 @@
 use crate::config::db::DBConfig;
 
 use serde::{Deserialize, Serialize};
+use tokio::fs::read_to_string;
 
 pub const CLASSPATH: &str = "./resources";
+const CONFIG_FILE_BASE_NAME: &str = "config";
 
 /// ##Configuration
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -20,9 +22,17 @@ pub struct AppConfig {
 /// ##Init configuration
 ///
 /// Extract configuration from config file located at ./resources/config.yaml
-pub fn init_config() -> Result<AppConfig, crate::errors::error::CustomError> {
-    let path = format!("{}/config.yaml", CLASSPATH);
-    let config_str = std::fs::read_to_string(path)?;
+pub async fn init_config(
+    profile: Option<String>,
+) -> Result<AppConfig, crate::errors::error::CustomError> {
+    let path = match profile {
+        None => format!("{}/{}.yaml", CLASSPATH, CONFIG_FILE_BASE_NAME),
+        Some(prefix) => format!("{}/{}-{}.yaml", CLASSPATH, CONFIG_FILE_BASE_NAME, prefix),
+    };
+
+    let config_str = read_to_string(path).await?;
+
     let config: Config = serde_yaml::from_str(&config_str)?;
+
     Ok(config.app)
 }

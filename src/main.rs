@@ -12,7 +12,9 @@ use data::db::*;
 
 #[tokio::main]
 async fn main() -> Result<(), CustomError> {
-    let config = init_config()?;
+    let profile = std::env::var("active-profiles").ok();
+
+    let config = init_config(profile).await?;
 
     let db_pool = create_db_pool(&config)?;
 
@@ -26,7 +28,7 @@ async fn main() -> Result<(), CustomError> {
     let repository = PlayerRepository::new(db_pool.clone());
 
     let pl = repository
-        .insert(&Player::with_name("Kajk".to_string()))
+        .insert(&Player::with_name("opo2".to_string()))
         .await?;
 
     let p = repository

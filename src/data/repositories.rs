@@ -24,7 +24,7 @@ impl PlayerRepository {
     /// ###Map from row to player
     ///
     /// __row__ : row to map to player
-    fn map_row(row: &Row) -> Player {
+    pub fn map_row(row: &Row) -> Player {
         let x: u32 = row.get(2);
         Player {
             id: row.get(0),

@@ -36,3 +36,17 @@ macro_rules! execute_query_opt {
             .map_err(|source| CustomError::ExecuteDBQueryError { source, query: q })?
     }};
 }
+
+#[macro_export]
+macro_rules! execute_batch {
+    (connection <- $conn: expr, query <- $query: expr) => {{
+        let c: &DBConn = $conn;
+        let q: String = $query;
+        c.batch_execute(q.as_str())
+            .await
+            .map_err(|e| CustomError::ExecuteDBQueryError {
+                source: e,
+                query: q,
+            })
+    }};
+}

@@ -6,6 +6,7 @@ use mobc_postgres::tokio_postgres::{Config, NoTls};
 use mobc_postgres::PgConnectionManager;
 use std::str::FromStr;
 use std::time::Duration;
+use tokio::fs::read_to_string;
 
 // Database pool constants
 const DB_POOL_MAX_OPEN: u64 = 32;
@@ -14,6 +15,7 @@ const DB_POOL_TIMEOUT_SECONDS: u64 = 15;
 
 // Sql file path
 const INIT_SQL_FILE: &str = "./resources/db/init.sql";
+const DROP_SQL_FILE: &str = "./resources/db/drop.sql";
 
 // -- Custom types
 
@@ -52,17 +54,28 @@ pub async fn get_connection(pool: &DBPool) -> Result<DBConn, CustomError> {
 
 /// Init a database
 ///
-/// __connetion__ : database connection
+/// __connection__ : database connection
 pub async fn init_db(connection: &DBConn) -> Result<(), CustomError> {
-    let init_sql = std::fs::read_to_string(INIT_SQL_FILE)?;
+    let init_sql = read_to_string(INIT_SQL_FILE).await?;
 
-    let _ = connection
-        .batch_execute(init_sql.as_str())
-        .await
-        .map_err(|e| CustomError::ExecuteDBQueryError {
-            source: e,
-            query: init_sql,
-        });
+    let _ = crate::execute_batch! {
+        connection <- connection,
+        query <- init_sql
+    };
+
+    Ok(())
+}
+
+/// Clear a database
+///
+/// __connection__ : database connection
+pub async fn clear_db(connection: &DBConn) -> Result<(), CustomError> {
+    let sql = read_to_string(DROP_SQL_FILE).await?;
+
+    let _ = crate::execute_batch! {
+        connection <- connection,
+        query <- sql
+    };
 
     Ok(())
 }

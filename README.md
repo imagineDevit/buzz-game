@@ -21,6 +21,7 @@ Librairies RUST utilisées                                              | Usage
 [tokio](https://crates.io/crates/tokio)                                | Pour l'écriture de code asynchone
 [async-trait](https://crates.io/crates/async-trait)                    | Pour l'écriture de `traits` contenant des functions `async`
 [thiserror](https://crates.io/crates/thiserror)                        | Pour la gestion des erreurs personnalisées
+[rstest](https://crates.io/crates/rstest)                              | Pour l'écriture des tests
 
 
 

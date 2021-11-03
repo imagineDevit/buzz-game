@@ -22,8 +22,12 @@ mobc-postgres = {version = "0.7.0", features = ["with-chrono-0_4"]}
 mobc = "0.7.3"
 
 # For async programmation
-tokio = {version = "1.8.0", features = ["macros"]}
+tokio = {version = "1.8.0", features = ["macros", "fs"]}
 async-trait = "0.1.51"
 
 # For error handling
 thiserror = "1.0.30"
+
+# For testing
+rstest =  "0.11.0"
+async-std = { version = "1.10.0", features = ["tokio1", "attributes"] }

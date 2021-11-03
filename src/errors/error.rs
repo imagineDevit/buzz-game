@@ -13,8 +13,10 @@ pub enum CustomError {
         source: tokio_postgres::Error,
         query: String,
     },
+    #[error("Error occurred while opening file: {0}")]
+    OpenFileError(#[from] std::io::Error),
     #[error("Error occurred while reading file: {0}")]
-    ReadFileError(#[from] std::io::Error),
+    ReadFileError(#[from] std::string::FromUtf8Error),
     #[error("Error occurred deserializing yaml file: {0}")]
     YamlDeserializationError(#[from] serde_yaml::Error),
     #[error("Error occurred while trying to insert player with name {0}")]
