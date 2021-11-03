@@ -13,7 +13,7 @@ mod tests {
 
     #[fixture]
     async fn repository() -> PlayerRepository {
-        let config = init_config(Some("test".to_string())).await.unwrap();
+        let config = init_config().await.unwrap();
         let pool = create_db_pool(&config).unwrap().clone();
         let pool_clone = pool.clone();
 

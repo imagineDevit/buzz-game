@@ -10,7 +10,7 @@ mod tests {
 
     #[fixture]
     async fn init_config_fixture() -> Result<AppConfig, crate::errors::error::CustomError> {
-        init_config(Some("test".to_string())).await
+        init_config().await
     }
 
     #[rstest(init_config_fixture as config)]
