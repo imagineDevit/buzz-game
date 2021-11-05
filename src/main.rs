@@ -1,12 +1,15 @@
 #![allow(dead_code)]
-mod config;
-mod data;
-mod errors;
+
+use data::db::*;
 
 use crate::config::app::init_config;
 use crate::data::repositories::PlayerRepository;
 use crate::errors::error::CustomError;
-use data::db::*;
+
+mod config;
+mod data;
+mod dto;
+mod errors;
 
 #[tokio::main]
 async fn main() -> Result<(), CustomError> {

@@ -1,8 +1,8 @@
+use mobc_postgres::tokio_postgres::types::ToSql;
+
 use crate::data::db::{get_connection, DBPool};
 use crate::data::entities::Player;
 use crate::errors::error::CustomError;
-use mobc_postgres::tokio_postgres::types::ToSql;
-use mobc_postgres::tokio_postgres::Row;
 
 const INSERT_QUERY: &str = "INSERT INTO players (id, name, score) VALUES ($1, $2, $3) RETURNING *";
 const EXISTS_BY_ID_QUERY: &str = "SELECT exists(SELECT 1 FROM players WHERE id = $1)";
@@ -21,18 +21,6 @@ pub struct PlayerRepository {
 }
 
 impl PlayerRepository {
-    /// ###Map from row to player
-    ///
-    /// __row__ : row to map to player
-    pub fn map_row(row: &Row) -> Player {
-        let x: u32 = row.get(2);
-        Player {
-            id: row.get(0),
-            name: row.get(1),
-            score: x as u8,
-        }
-    }
-
     /// ###Create a new player repository
     ///
     /// __conn__ : database connection associated to the created repository
@@ -59,7 +47,7 @@ impl PlayerRepository {
                 params <- &[&player.id, &player.name, &(player.score as u32)]
             };
 
-            Ok(PlayerRepository::map_row(&row))
+            Ok(Player::from(row))
         }
     }
 
@@ -99,7 +87,7 @@ impl PlayerRepository {
             params <- &[&att]
         };
 
-        Ok(row.map(|ref r| PlayerRepository::map_row(r)))
+        Ok(row.map(|r| Player::from(r)))
     }
 
     /// ##Update player score
@@ -123,7 +111,7 @@ impl PlayerRepository {
                 params <- &[&(new_score as u32), &player_id]
             };
 
-            Ok(PlayerRepository::map_row(&row))
+            Ok(Player::from(row))
         } else {
             Err(CustomError::PlayerNodFoundWithIdError(player_id.clone()))
         }

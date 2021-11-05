@@ -1,3 +1,4 @@
+use mobc_postgres::tokio_postgres::Row;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -6,7 +7,17 @@ use uuid::Uuid;
 pub struct Player {
     pub id: String,
     pub name: String,
-    pub score: u8,
+    pub score: u32,
+}
+
+impl From<Row> for Player {
+    fn from(row: Row) -> Self {
+        Self {
+            id: row.get("id"),
+            name: row.get("name"),
+            score: row.get("score"),
+        }
+    }
 }
 
 impl Player {
