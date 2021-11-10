@@ -23,7 +23,7 @@ mobc = "0.7.3"
 
 # For async programmation
 tokio = {version = "1.8.0", features = ["macros", "fs"]}
-async-trait = "0.1.51"
+tokio-stream = {version = "0.1.8", features = []}
 
 # For error handling
 thiserror = "1.0.30"

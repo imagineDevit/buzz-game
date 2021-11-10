@@ -70,13 +70,13 @@ impl PartialEq for Answer {
 ///     __update__ : true if the score has been updated
 ///
 ///  * None
-#[derive(Serialize, Debug, Clone)]
+#[derive(Serialize, Debug, PartialEq, Clone, Eq)]
 #[serde(untagged)]
 pub enum Messages {
     Question {
         number: u8,
         label: String,
-        points: u8,
+        points: u32,
         answers: HashSet<Answer>,
     },
 
@@ -93,7 +93,7 @@ pub enum Messages {
     #[serde(rename_all = "camelCase")]
     PlayerScore {
         player_name: String,
-        score: u8,
+        score: u32,
         good_answer: String,
         update: bool,
     },

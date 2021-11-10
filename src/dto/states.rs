@@ -81,7 +81,7 @@ impl StateChange {
 
     pub fn with_question(question: Messages) -> Self {
         Self {
-            change_type: StateChangeType::NewPlayerScore,
+            change_type: StateChangeType::NewQuestion,
             can_buzz: false,
             message: question,
             players: vec![],
@@ -91,7 +91,7 @@ impl StateChange {
 
     pub fn with_buzz(buzz: Messages) -> Self {
         Self {
-            change_type: StateChangeType::NewPlayerScore,
+            change_type: StateChangeType::NewBuzz,
             can_buzz: false,
             message: buzz,
             players: vec![],
@@ -101,7 +101,7 @@ impl StateChange {
 
     pub fn with_answer(answer: Messages) -> Self {
         Self {
-            change_type: StateChangeType::NewPlayerScore,
+            change_type: StateChangeType::NewAnswer,
             can_buzz: false,
             message: answer,
             players: vec![],

@@ -194,7 +194,6 @@ name = "buzz-game"
 version = "0.1.0"
 dependencies = [
  "async-std",
- "async-trait",
  "mobc",
  "mobc-postgres",
  "rstest",
@@ -204,6 +203,7 @@ dependencies = [
  "serde_yaml",
  "thiserror",
  "tokio",
+ "tokio-stream",
  "uuid",
 ]
 
@@ -1132,6 +1132,17 @@ dependencies = [
  "socket2",
  "tokio",
  "tokio-util",
+]
+
+[[package]]
+name = "tokio-stream"
+version = "0.1.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "50145484efff8818b5ccd256697f36863f587da82cf8b409c53adf1e840798e3"
+dependencies = [
+ "futures-core",
+ "pin-project-lite",
+ "tokio",
 ]
 
 [[package]]

@@ -16,6 +16,7 @@ pub enum SearchAttributes {
 }
 
 /// ##Players data access layer
+#[derive(Clone)]
 pub struct PlayerRepository {
     pub db_pool: DBPool,
 }
@@ -98,7 +99,7 @@ impl PlayerRepository {
     pub async fn update_score(
         &self,
         player_id: String,
-        new_score: u8,
+        new_score: u32,
     ) -> Result<Player, CustomError> {
         let exist = self
             .exist_by(SearchAttributes::Id(player_id.clone()))
