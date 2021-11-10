@@ -26,7 +26,7 @@ pub struct AppConfig {
 ///
 /// Extract configuration from config file located at ./resources/config.yaml
 pub async fn init_config() -> Result<AppConfig, crate::errors::error::CustomError> {
-    let profile = extract_provided_profile();
+    let profile = std::env::var(ACTIVE_PROFILE).ok();
 
     let profiles = extract_looked_profiles().await;
 
@@ -45,26 +45,6 @@ pub async fn init_config() -> Result<AppConfig, crate::errors::error::CustomErro
     let config: Config = serde_yaml::from_str(&config_str)?;
 
     Ok(config.app)
-}
-
-/// ##Extract active-profile from env variables
-///
-/// For example, if application is launched with the following command
-///
-/// ```
-/// cargo run active-profile rec
-/// ```
-/// This method wil return Some("rec")
-fn extract_provided_profile() -> Option<String> {
-    let mut profile = Some(String::default());
-    let mut args = std::env::args().collect::<Vec<String>>().into_iter();
-    while let Some(p) = profile {
-        profile = args.next();
-        if p.eq(ACTIVE_PROFILE) {
-            break;
-        }
-    }
-    profile
 }
 
 /// ##Extract profiles for which config file exists in the CLASSPATH directory

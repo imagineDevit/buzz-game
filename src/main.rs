@@ -1,16 +1,16 @@
 #![allow(dead_code)]
 
 use std::collections::HashSet;
+
+use rand::seq::SliceRandom;
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use tokio_stream::StreamExt;
 
 use data::db::*;
 
 use crate::config::app::init_config;
-use crate::data::entities::Player;
-use crate::data::repositories::{PlayerRepository, SearchAttributes};
+use crate::data::repositories::PlayerRepository;
 use crate::dto::messages::{Answer, Messages};
-use crate::dto::requests::Requests;
 use crate::dto::states::StateChange;
 use crate::errors::error::CustomError;
 use crate::event::emitters::EventEmitters;
@@ -32,116 +32,212 @@ async fn main() -> Result<(), CustomError> {
 
     let pool = db_pool.clone();
 
-    let handle = tokio::spawn(async move {
+    tokio::spawn(async move {
         let connection = get_connection(&pool).await.unwrap();
         let _ = data::db::init_db(&connection).await.unwrap();
-    });
+    })
+    .await
+    .unwrap();
 
-    handle.await.unwrap();
+    let _repository = PlayerRepository::new(db_pool.clone());
 
-    let repository = PlayerRepository::new(db_pool.clone());
+    let _game_info = GameInfo::default();
 
-    let mut game_info = GameInfo::default();
+    let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<StateChange>();
 
-    let questions = vec![
+    let _emitters = EventEmitters {
+        state_changes: tx,
+        question_iterator: list_of_questions().iter(),
+    };
+
+    let _stream = UnboundedReceiverStream::new(rx);
+
+    Ok(())
+}
+
+fn list_of_questions() -> Vec<Messages> {
+    let mut q = vec![
         Messages::Question {
             number: 0,
-            label: "What's your name".to_string(),
+            label: "Lequel de ces noms ne correspond pas à un langage informatique ?".to_string(),
             points: 1,
             answers: HashSet::from([
                 Answer {
                     number: 0,
-                    label: "Joe".to_string(),
+                    label: "Elm".to_string(),
                     good: false,
                 },
                 Answer {
                     number: 1,
-                    label: "Chlo".to_string(),
+                    label: "Rust".to_string(),
+                    good: false,
+                },
+                Answer {
+                    number: 2,
+                    label: "Dark".to_string(),
                     good: true,
                 },
             ]),
         },
         Messages::Question {
             number: 1,
-            label: "Are u ready".to_string(),
+            label: "Dans le langage RUST quel mot clé est utilisé pour désigné une fonction ?"
+                .to_string(),
             points: 2,
             answers: HashSet::from([
                 Answer {
                     number: 0,
-                    label: "Joe".to_string(),
+                    label: "fun".to_string(),
                     good: false,
                 },
                 Answer {
                     number: 1,
-                    label: "Chlo".to_string(),
+                    label: "fn".to_string(),
                     good: true,
+                },
+                Answer {
+                    number: 2,
+                    label: "func".to_string(),
+                    good: false,
+                },
+            ]),
+        },
+        Messages::Question {
+            number: 2,
+            label: "Dans quelle version de java est apparu le mot clé 'default' ?".to_string(),
+            points: 1,
+            answers: HashSet::from([
+                Answer {
+                    number: 0,
+                    label: "Java 8".to_string(),
+                    good: true,
+                },
+                Answer {
+                    number: 1,
+                    label: "Java 11".to_string(),
+                    good: false,
+                },
+                Answer {
+                    number: 2,
+                    label: "Java 14".to_string(),
+                    good: false,
+                },
+            ]),
+        },
+        Messages::Question {
+            number: 3,
+            label: "Dans le langage RUST quel mot clé est utilisé pour définir une interface ?"
+                .to_string(),
+            points: 2,
+            answers: HashSet::from([
+                Answer {
+                    number: 0,
+                    label: "trait".to_string(),
+                    good: true,
+                },
+                Answer {
+                    number: 1,
+                    label: "inter".to_string(),
+                    good: false,
+                },
+                Answer {
+                    number: 2,
+                    label: "impl".to_string(),
+                    good: false,
+                },
+            ]),
+        },
+        Messages::Question {
+            number: 4,
+            label: "Dans le sigle WASI, que signifie le SI ?".to_string(),
+            points: 3,
+            answers: HashSet::from([
+                Answer {
+                    number: 0,
+                    label: "System Interface".to_string(),
+                    good: true,
+                },
+                Answer {
+                    number: 1,
+                    label: "Social Information".to_string(),
+                    good: false,
+                },
+                Answer {
+                    number: 2,
+                    label: "Systeme Informatique".to_string(),
+                    good: false,
+                },
+            ]),
+        },
+        Messages::Question {
+            number: 5,
+            label: "En Kotlin quel mot clé est utilisé pour une fonction asynchrone ?".to_string(),
+            points: 2,
+            answers: HashSet::from([
+                Answer {
+                    number: 0,
+                    label: "async".to_string(),
+                    good: false,
+                },
+                Answer {
+                    number: 1,
+                    label: "await".to_string(),
+                    good: false,
+                },
+                Answer {
+                    number: 2,
+                    label: "suspend".to_string(),
+                    good: true,
+                },
+            ]),
+        },
+        Messages::Question {
+            number: 6,
+            label: "Dans le language GO, quel mot clé permet de créer un thread ?".to_string(),
+            points: 3,
+            answers: HashSet::from([
+                Answer {
+                    number: 0,
+                    label: "go".to_string(),
+                    good: true,
+                },
+                Answer {
+                    number: 1,
+                    label: "thread".to_string(),
+                    good: false,
+                },
+                Answer {
+                    number: 2,
+                    label: "th".to_string(),
+                    good: false,
+                },
+            ]),
+        },
+        Messages::Question {
+            number: 7,
+            label: "Dans quel lanquage retrouve t-on le mot clé 'defer' ?".to_string(),
+            points: 2,
+            answers: HashSet::from([
+                Answer {
+                    number: 0,
+                    label: "Python".to_string(),
+                    good: false,
+                },
+                Answer {
+                    number: 1,
+                    label: "Go".to_string(),
+                    good: true,
+                },
+                Answer {
+                    number: 2,
+                    label: "Java".to_string(),
+                    good: false,
                 },
             ]),
         },
     ];
 
-    let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<StateChange>();
+    q.shuffle(&mut rand::thread_rng());
 
-    let mut emitters = EventEmitters {
-        state_changes: tx,
-        question_iterator: questions.iter(),
-    };
-
-    let mut stream = UnboundedReceiverStream::new(rx);
-
-    tokio::spawn(async move {
-        loop {
-            while let Some(state) = stream.next().await {
-                println!("received {:?}", state)
-            }
-        }
-    });
-
-    let player = Player::with_name("Joe".to_string());
-
-    repository.insert(&player).await?;
-
-    emitters.on_game_started(&mut game_info)?;
-    emitters.on_buzz_registered(Requests::RegisterBuzz {
-        player_name: "Joe".to_string(),
-    })?;
-
-    let p = repository
-        .find_by(SearchAttributes::Name("Joe".to_string()))
-        .await?;
-
-    let repo = repository.clone();
-
-    emitters
-        .on_answer_registered(
-            Requests::RegisterAnswer {
-                player_name: "Joe".to_string(),
-                question_number: 0,
-                answer_number: 1,
-            },
-            p.unwrap(),
-            |(p, point)| async move { repo.update_score(p.id, p.score + point).await },
-            &mut game_info,
-        )
-        .await?;
-
-    let p = repository
-        .find_by(SearchAttributes::Name("Joe".to_string()))
-        .await?;
-
-    let repo = repository.clone();
-    emitters
-        .on_answer_registered(
-            Requests::RegisterAnswer {
-                player_name: "Joe".to_string(),
-                question_number: 1,
-                answer_number: 1,
-            },
-            p.unwrap(),
-            |(p, point)| async move { repo.update_score(p.id, p.score + point).await },
-            &mut game_info,
-        )
-        .await?;
-
-    Ok(())
+    q
 }

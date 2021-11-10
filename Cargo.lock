@@ -196,6 +196,7 @@ dependencies = [
  "async-std",
  "mobc",
  "mobc-postgres",
+ "rand",
  "rstest",
  "serde",
  "serde_derive",

@@ -31,3 +31,5 @@ thiserror = "1.0.30"
 # For testing
 rstest =  "0.11.0"
 async-std = { version = "1.10.0", features = ["tokio1", "attributes"] }
+
+rand = "0.8.4"

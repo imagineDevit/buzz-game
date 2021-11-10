@@ -2,9 +2,9 @@ use serde::Serialize;
 
 use crate::dto::messages::Messages;
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Serialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-enum StateChangeType {
+pub enum StateChangeType {
     GameStart,
     GameEnd,
     CanBuzz,
@@ -29,13 +29,13 @@ enum StateChangeType {
 #[serde(rename_all = "camelCase")]
 pub struct StateChange {
     #[serde(rename = "type")]
-    change_type: StateChangeType,
-    can_buzz: bool,
+    pub change_type: StateChangeType,
+    pub can_buzz: bool,
     #[serde(skip_serializing_if = "Messages::is_none")]
-    message: Messages,
+    pub message: Messages,
     #[serde(skip_serializing_if = "Vec::is_empty")]
-    players: Vec<String>,
-    required_nb_players: u8,
+    pub players: Vec<String>,
+    pub required_nb_players: u8,
 }
 
 impl StateChange {

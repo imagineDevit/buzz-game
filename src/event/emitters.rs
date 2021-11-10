@@ -18,6 +18,7 @@ pub struct EventEmitters<'a> {
 }
 
 impl<'a> EventEmitters<'a> {
+    
     pub fn on_game_started(&mut self, game_info: &mut GameInfo) -> Result<(), CustomError> {
         game_info.start();
         self.state_changes.send(StateChange::start())?;
@@ -67,7 +68,7 @@ impl<'a> EventEmitters<'a> {
     pub async fn on_answer_registered<F: Future<Output = Result<Player, CustomError>>>(
         &mut self,
         answer: Requests,
-        mut player: Player,
+        player: Player,
         update_score: impl FnOnce((Player, u32)) -> F,
         game_info: &mut GameInfo,
     ) -> Result<(), CustomError> {
@@ -89,17 +90,13 @@ impl<'a> EventEmitters<'a> {
                                     },
                                 ))?;
 
-                                if good {
-                                    player = update_score((player, points)).await?;
-                                }
+                                let p = if good {
+                                    update_score((player, points)).await?
+                                } else {
+                                    player
+                                };
 
-                                self.emit_score(
-                                    player,
-                                    label,
-                                    good,
-                                    vec![],
-                                    game_info.min_players,
-                                )?;
+                                self.emit_score(p, label, good, vec![], game_info.min_players)?;
 
                                 std::thread::sleep(Duration::from_secs(1));
                                 self.next_question(game_info);
