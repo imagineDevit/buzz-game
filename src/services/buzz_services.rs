@@ -29,15 +29,13 @@ impl BuzzService {
                 .await?;
 
             // send a PlayerAdded internal event
-            self.tx.send(InternalEvent::PlayerAdded {
-                player_name: name.clone(),
-                score: Messages::PlayerScore {
+            self.tx
+                .send(InternalEvent::PlayerAdded(Messages::PlayerScore {
                     player_name: name.clone(),
                     score: 0,
                     good_answer: String::default(),
                     update: false,
-                },
-            })?;
+                }))?;
 
             // return PlayerAdded response
             Ok(Response::PlayerAdded)

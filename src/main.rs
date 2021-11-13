@@ -66,7 +66,6 @@ async fn main() -> Result<(), CustomError> {
     let _state_changes_stream = UnboundedReceiverStream::new(state_change_receiver);
 
     // handle internal events
-
     let repositry_clone = repository.clone();
 
     let mut internal_events_stream = UnboundedReceiverStream::new(internal_event_receiver);
@@ -91,16 +90,18 @@ async fn main() -> Result<(), CustomError> {
                     .collect::<Vec<String>>();
 
                 match internal_event {
-                    InternalEvent::PlayerAdded { player_name, score } => {
+                    InternalEvent::PlayerAdded(score) => {
                         if !started.lock().await.load(Ordering::Relaxed) {
-                            let ready = game_info.add_player(player_name).await;
+                            if let Messages::PlayerScore { player_name, .. } = score.clone() {
+                                let ready = game_info.add_player(player_name).await;
 
-                            emitters
-                                .emit_score(score, p.clone(), game_info.min_players)
-                                .unwrap();
+                                emitters
+                                    .emit_score(score, p.clone(), game_info.min_players)
+                                    .unwrap();
 
-                            if ready {
-                                emitters.on_game_started(&mut game_info).await.unwrap();
+                                if ready {
+                                    emitters.on_game_started(&mut game_info).await.unwrap();
+                                }
                             }
                         }
                     }
