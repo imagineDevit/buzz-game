@@ -12,6 +12,7 @@ pub enum StateChangeType {
     NewQuestion,
     NewBuzz,
     NewAnswer,
+    Error,
 }
 
 /// ##State representation
@@ -30,7 +31,6 @@ pub enum StateChangeType {
 pub struct StateChange {
     #[serde(rename = "type")]
     pub change_type: StateChangeType,
-    pub can_buzz: bool,
     #[serde(skip_serializing_if = "Messages::is_none")]
     pub message: Messages,
     #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -42,7 +42,6 @@ impl StateChange {
     pub fn start() -> Self {
         Self {
             change_type: StateChangeType::GameStart,
-            can_buzz: false,
             message: Messages::None,
             players: vec![],
             required_nb_players: 0,
@@ -52,7 +51,6 @@ impl StateChange {
     pub fn end() -> Self {
         Self {
             change_type: StateChangeType::GameEnd,
-            can_buzz: false,
             message: Messages::None,
             players: vec![],
             required_nb_players: 0,
@@ -62,8 +60,7 @@ impl StateChange {
     pub fn with_can_buzz(can_buzz: bool) -> Self {
         Self {
             change_type: StateChangeType::CanBuzz,
-            can_buzz,
-            message: Messages::None,
+            message: Messages::CanBuzz { can_buzz },
             players: vec![],
             required_nb_players: 0,
         }
@@ -72,7 +69,6 @@ impl StateChange {
     pub fn with_score(score: Messages, players: Vec<String>, required_nb_players: u8) -> Self {
         Self {
             change_type: StateChangeType::NewPlayerScore,
-            can_buzz: false,
             message: score,
             players,
             required_nb_players,
@@ -82,7 +78,6 @@ impl StateChange {
     pub fn with_question(question: Messages) -> Self {
         Self {
             change_type: StateChangeType::NewQuestion,
-            can_buzz: false,
             message: question,
             players: vec![],
             required_nb_players: 0,
@@ -92,7 +87,6 @@ impl StateChange {
     pub fn with_buzz(buzz: Messages) -> Self {
         Self {
             change_type: StateChangeType::NewBuzz,
-            can_buzz: false,
             message: buzz,
             players: vec![],
             required_nb_players: 0,
@@ -102,8 +96,16 @@ impl StateChange {
     pub fn with_answer(answer: Messages) -> Self {
         Self {
             change_type: StateChangeType::NewAnswer,
-            can_buzz: false,
             message: answer,
+            players: vec![],
+            required_nb_players: 0,
+        }
+    }
+
+    pub fn with_error(msg: String) -> Self {
+        Self {
+            change_type: StateChangeType::Error,
+            message: Messages::Error { message: msg },
             players: vec![],
             required_nb_players: 0,
         }

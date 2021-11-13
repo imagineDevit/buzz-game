@@ -1,12 +1,14 @@
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 use crate::dto::messages::{Answer, Messages};
 
 #[derive(Debug)]
 pub struct GameInfo {
-    pub started: AtomicBool,
-    pub buzzed: AtomicBool,
+    pub started: Arc<Mutex<AtomicBool>>,
+    pub buzzed: Arc<Mutex<AtomicBool>>,
     pub max_players: u8,
     pub min_players: u8,
     pub number_of_players: AtomicU8,
@@ -17,8 +19,8 @@ pub struct GameInfo {
 impl Default for GameInfo {
     fn default() -> Self {
         Self {
-            started: AtomicBool::new(false),
-            buzzed: AtomicBool::new(false),
+            started: Arc::new(Mutex::new(AtomicBool::new(false))),
+            buzzed: Arc::new(Mutex::new(AtomicBool::new(false))),
             max_players: 6,
             min_players: 3,
             number_of_players: AtomicU8::new(0),
@@ -29,21 +31,26 @@ impl Default for GameInfo {
 }
 
 impl GameInfo {
-    pub fn start(&self) {
+    pub async fn start(&self) {
         if self.number_of_players.load(Ordering::Relaxed) >= self.min_players
-            && !self.started.load(Ordering::Relaxed)
+            && !self.started.lock().await.load(Ordering::Relaxed)
         {
-            self.started.store(true, Ordering::Relaxed);
+            self.started.lock().await.store(true, Ordering::Relaxed);
         }
     }
 
-    pub fn add_player(&mut self, name: String) -> bool {
-        if !self.started.load(Ordering::Relaxed) && !self.players.contains(&name) {
+    pub async fn add_player(&mut self, name: String) -> bool {
+        if !self.started.lock().await.load(Ordering::Relaxed) && !self.players.contains(&name) {
             self.players.insert(name);
             let nb = self.number_of_players.load(Ordering::Relaxed);
             self.number_of_players.store(nb + 1, Ordering::Relaxed);
 
-            return self.number_of_players.load(Ordering::Relaxed) >= self.min_players;
+            return if self.number_of_players.load(Ordering::Relaxed) >= self.min_players {
+                self.start().await;
+                true
+            } else {
+                false
+            };
         }
 
         false
@@ -58,16 +65,16 @@ impl GameInfo {
         }
     }
 
-    pub fn add_buzz(&self) -> bool {
-        if !self.buzzed.load(Ordering::Relaxed) {
-            self.buzzed.store(true, Ordering::Relaxed);
+    pub async fn add_buzz(&self) -> bool {
+        if !self.buzzed.lock().await.load(Ordering::Relaxed) {
+            self.buzzed.lock().await.store(true, Ordering::Relaxed);
             return true;
         }
         false
     }
 
-    pub fn release_buzz(&self) {
-        self.buzzed.store(false, Ordering::Relaxed);
+    pub async fn release_buzz(&self) {
+        self.buzzed.lock().await.store(false, Ordering::Relaxed);
     }
 }
 
@@ -85,18 +92,18 @@ mod game_info_tests {
     }
 
     #[rstest(default_game_info as info)]
-    fn start_test(info: GameInfo) {
+    async fn start_test(info: GameInfo) {
         let mut info = info;
 
         let names = vec!["a", "b", "c"];
 
         for name in names {
-            assert_eq!(false, info.started.load(Ordering::Relaxed));
-            info.add_player(String::from(name));
-            info.start();
+            assert_eq!(false, info.started.lock().await.load(Ordering::Relaxed));
+            info.add_player(String::from(name)).await;
+            info.start().await;
         }
 
-        assert_eq!(true, info.started.load(Ordering::Relaxed));
+        assert_eq!(true, info.started.lock().await.load(Ordering::Relaxed));
     }
 
     #[rstest(default_game_info as info)]
@@ -122,18 +129,18 @@ mod game_info_tests {
     }
 
     #[rstest(default_game_info as info)]
-    fn add_release_buzz_test(info: GameInfo) {
-        assert_eq!(false, info.buzzed.load(Ordering::Relaxed));
+    async fn add_release_buzz_test(info: GameInfo) {
+        assert_eq!(false, info.buzzed.lock().await.load(Ordering::Relaxed));
 
-        let added = info.add_buzz();
-        assert_eq!(true, info.buzzed.load(Ordering::Relaxed));
+        let added = info.add_buzz().await;
+        assert_eq!(true, info.buzzed.lock().await.load(Ordering::Relaxed));
         assert_eq!(true, added);
 
-        let added = info.add_buzz();
-        assert_eq!(true, info.buzzed.load(Ordering::Relaxed));
+        let added = info.add_buzz().await;
+        assert_eq!(true, info.buzzed.lock().await.load(Ordering::Relaxed));
         assert_eq!(false, added);
 
-        info.release_buzz();
-        assert_eq!(false, info.buzzed.load(Ordering::Relaxed));
+        info.release_buzz().await;
+        assert_eq!(false, info.buzzed.lock().await.load(Ordering::Relaxed));
     }
 }

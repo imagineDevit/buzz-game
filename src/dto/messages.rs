@@ -69,6 +69,8 @@ impl PartialEq for Answer {
 ///
 ///     __update__ : true if the score has been updated
 ///
+///  * CanBuzz,
+///
 ///  * None
 #[derive(Serialize, Debug, PartialEq, Clone, Eq)]
 #[serde(untagged)]
@@ -96,6 +98,15 @@ pub enum Messages {
         score: u32,
         good_answer: String,
         update: bool,
+    },
+
+    #[serde(rename_all = "camelCase")]
+    CanBuzz {
+        can_buzz: bool,
+    },
+
+    Error {
+        message: String,
     },
 
     None,

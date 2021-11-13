@@ -1,9 +1,9 @@
 pub(crate) mod emitters;
+pub(crate) mod internal_events;
 
 #[cfg(test)]
 mod event_emitters_test {
     use crate::data::entities::Player;
-    use crate::dto::requests::Requests;
     use crate::dto::states::StateChangeType;
     use crate::{Answer, EventEmitters, GameInfo, Messages, StateChange};
     use rstest::*;
@@ -63,7 +63,7 @@ mod event_emitters_test {
         let mut stream = UnboundedReceiverStream::new(rx);
 
         /* start game */
-        emitters.on_game_started(&mut game_info).unwrap();
+        emitters.on_game_started(&mut game_info).await.unwrap();
 
         let state = stream.next().await;
         assert!(state.is_some());
@@ -88,9 +88,8 @@ mod event_emitters_test {
         }
 
         emitters
-            .on_buzz_registered(Requests::RegisterBuzz {
-                player_name: "Joe".to_string(),
-            })
+            .on_buzz_registered("Joe".to_string(), &mut game_info)
+            .await
             .unwrap();
         let state = stream.next().await;
         assert!(state.is_some());
@@ -102,13 +101,9 @@ mod event_emitters_test {
 
         emitters
             .on_answer_registered(
-                Requests::RegisterAnswer {
-                    player_name: "Joe".to_string(),
-                    question_number: 0,
-                    answer_number: 1,
-                },
+                1,
                 Player::with_name("Joe".to_string()),
-                |(pl, _)| async { Ok(pl) },
+                |(pl, _)| async { Ok(Player::with_name(pl)) },
                 &mut game_info,
             )
             .await
@@ -141,9 +136,8 @@ mod event_emitters_test {
         }
 
         emitters
-            .on_buzz_registered(Requests::RegisterBuzz {
-                player_name: "Joe".to_string(),
-            })
+            .on_buzz_registered("Joe".to_string(), &mut game_info)
+            .await
             .unwrap();
         let state = stream.next().await;
         assert!(state.is_some());
@@ -155,13 +149,9 @@ mod event_emitters_test {
 
         emitters
             .on_answer_registered(
-                Requests::RegisterAnswer {
-                    player_name: "Joe".to_string(),
-                    question_number: 0,
-                    answer_number: 1,
-                },
+                1,
                 Player::with_name("Joe".to_string()),
-                |(pl, _)| async { Ok(pl) },
+                |(pl, _)| async { Ok(Player::with_name(pl)) },
                 &mut game_info,
             )
             .await

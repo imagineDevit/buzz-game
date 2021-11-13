@@ -8,7 +8,7 @@ const INSERT_QUERY: &str = "INSERT INTO players (id, name, score) VALUES ($1, $2
 const EXISTS_BY_ID_QUERY: &str = "SELECT exists(SELECT 1 FROM players WHERE id = $1)";
 const EXISTS_BY_NAME_QUERY: &str = "SELECT exists(SELECT 1 FROM players WHERE name = $1)";
 const FIND_BY_NAME_QUERY: &str = "SELECT * FROM players WHERE name = $1";
-const UPDATE_SCORE_QUERY: &str = "UPDATE players SET score = $1 WHERE id = $2 RETURNING *";
+const UPDATE_SCORE_QUERY: &str = "UPDATE players SET score = $1 WHERE name = $2 RETURNING *";
 
 pub enum SearchAttributes {
     Name(String),
@@ -98,23 +98,25 @@ impl PlayerRepository {
     /// _return_ the player updated
     pub async fn update_score(
         &self,
-        player_id: String,
+        player_name: String,
         new_score: u32,
     ) -> Result<Player, CustomError> {
         let exist = self
-            .exist_by(SearchAttributes::Id(player_id.clone()))
+            .exist_by(SearchAttributes::Name(player_name.clone()))
             .await?;
 
-        if exist {
+        return if exist {
             let row = crate::execute_query! {
                 pool <- &self.db_pool,
                 query <- String::from(UPDATE_SCORE_QUERY),
-                params <- &[&(new_score as u32), &player_id]
+                params <- &[&(new_score as u32), &player_name]
             };
 
             Ok(Player::from(row))
         } else {
-            Err(CustomError::PlayerNodFoundWithIdError(player_id.clone()))
-        }
+            Err(CustomError::PlayerNotFoundWithNameError(
+                player_name.clone(),
+            ))
+        };
     }
 }

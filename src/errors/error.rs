@@ -1,6 +1,7 @@
 use crate::dto::states::StateChange;
 use mobc_postgres::tokio_postgres;
 use thiserror::Error;
+use crate::event::internal_events::InternalEvent;
 
 #[derive(Error, Debug)]
 pub enum CustomError {
@@ -23,9 +24,11 @@ pub enum CustomError {
     #[error("Error occurred while trying to insert player with name {0}")]
     PlayerAlreadyExistWithNameError(String),
     #[error("Error occurred while searching player with id {0}")]
-    PlayerNodFoundWithIdError(String),
+    PlayerNotFoundWithNameError(String),
     #[error("Error occurred while sending event message")]
     SendEventError(#[from] tokio::sync::mpsc::error::SendError<StateChange>),
+    #[error("Error occurred while sending internal event message")]
+    SendInternalEventError(#[from] tokio::sync::mpsc::error::SendError<InternalEvent>),
     #[error("Error occurred while tring to send bad message type")]
     BadRequestTypeError { message: String },
 }
