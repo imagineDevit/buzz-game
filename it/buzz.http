@@ -1,0 +1,18 @@
+
+
+###
+GET http://localhost:3030/game?player=chlo
+Content-Type: application/json
+
+###
+POST http://localhost:3030/game/buzz
+Content-Type: application/json
+
+< buzz.json
+
+###
+POST http://localhost:3030/game/answer
+Content-Type: application/json
+
+< answer.json
+

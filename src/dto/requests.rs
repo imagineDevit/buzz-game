@@ -38,3 +38,16 @@ pub enum Requests {
         player_name: String,
     },
 }
+
+#[derive(Deserialize, Debug)]
+pub struct AddPlayerQuery {
+    pub player: String
+}
+
+impl AddPlayerQuery {
+    pub fn to_request(&self) -> Requests {
+        Requests::AddPlayer {
+            name: self.player.clone()
+        }
+    }
+}

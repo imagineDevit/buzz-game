@@ -1,11 +1,19 @@
 #![allow(dead_code)]
 
 use std::collections::HashSet;
+use std::convert::Infallible;
+use std::ops::Deref;
 use std::sync::atomic::Ordering;
+use std::sync::Arc;
 
+use futures_util::Stream;
 use rand::seq::SliceRandom;
+use tokio::sync::Mutex;
+use tokio_stream::wrappers::BroadcastStream;
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use tokio_stream::StreamExt;
+use warp::sse::Event;
+use warp::{sse, Filter, Reply};
 
 use data::db::*;
 
@@ -18,6 +26,7 @@ use crate::event::emitters::EventEmitters;
 use crate::event::internal_events::InternalEvent;
 use crate::game_info::GameInfo;
 use crate::services::buzz_services::BuzzService;
+use crate::web::routes::Routes;
 
 mod config;
 mod data;
@@ -27,6 +36,7 @@ mod event;
 mod game_info;
 mod services;
 mod utils;
+mod web;
 
 #[tokio::main]
 async fn main() -> Result<(), CustomError> {
@@ -41,9 +51,7 @@ async fn main() -> Result<(), CustomError> {
     tokio::spawn(async move {
         let connection = get_connection(&pool).await.unwrap();
         let _ = data::db::init_db(&connection).await.unwrap();
-    })
-    .await
-    .unwrap();
+    });
 
     // Instantiate the game_info bean
     let mut game_info = GameInfo::default();
@@ -58,12 +66,10 @@ async fn main() -> Result<(), CustomError> {
     // Instanciation of application beans
     let repository = PlayerRepository::new(db_pool.clone());
 
-    let _service = BuzzService {
+    let service = Arc::new(Mutex::new(BuzzService {
         tx: internal_event_sender,
         repository: repository.clone(),
-    };
-
-    let _state_changes_stream = UnboundedReceiverStream::new(state_change_receiver);
+    }));
 
     // handle internal events
     let repositry_clone = repository.clone();
@@ -144,7 +150,32 @@ async fn main() -> Result<(), CustomError> {
         }
     });
 
+    // web
+
+    let _state_changes_stream = UnboundedReceiverStream::new(state_change_receiver);
+
+    warp::serve(
+        Routes::add_player(service.clone())
+            .or(Routes::register_buzz(service.clone()))
+            .or(Routes::register_answer(service.clone()))
+            .with(warp::cors().allow_any_origin())
+            .recover(crate::web::exception_handlers::handle_error),
+    )
+    .run(([127, 0, 0, 1], 3030))
+    .await;
+
     Ok(())
+}
+
+fn sse_state(state: StateChange) -> Result<Event, Infallible> {
+    let s = serde_json::to_string(&state).unwrap();
+    Ok(sse::Event::default().data(s))
+}
+
+fn stream_state(
+    stream: BroadcastStream<StateChange>,
+) -> impl Stream<Item = Result<Event, Infallible>> + Send + 'static {
+    stream.map(|state| sse_state(state.unwrap()))
 }
 
 fn list_of_questions() -> Vec<Messages> {

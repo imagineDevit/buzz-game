@@ -114,4 +114,3 @@ mod responses_tests {
         assert_eq!(str, response_json(t));
     }
 }
-

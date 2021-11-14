@@ -11,6 +11,8 @@ use crate::{CustomError, Messages, PlayerRepository};
 /// __repostory__ : player repository
 ///
 /// __tx__ : internal events sender
+
+#[derive(Clone)]
 pub struct BuzzService {
     pub repository: PlayerRepository,
     pub tx: UnboundedSender<InternalEvent>,

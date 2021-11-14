@@ -1,7 +1,8 @@
 use crate::dto::states::StateChange;
+use crate::event::internal_events::InternalEvent;
 use mobc_postgres::tokio_postgres;
 use thiserror::Error;
-use crate::event::internal_events::InternalEvent;
+use warp::reject::Reject;
 
 #[derive(Error, Debug)]
 pub enum CustomError {
@@ -32,3 +33,5 @@ pub enum CustomError {
     #[error("Error occurred while tring to send bad message type")]
     BadRequestTypeError { message: String },
 }
+
+impl Reject for CustomError {}
