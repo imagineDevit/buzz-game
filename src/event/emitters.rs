@@ -6,7 +6,7 @@ use tokio::sync::mpsc::UnboundedSender;
 
 use crate::data::entities::Player;
 use crate::dto::messages::{Answer, Messages};
-use crate::dto::states::StateChange;
+use crate::dto::states::{StateChange, StateChangeWrapper};
 use crate::errors::error::CustomError;
 use crate::game_info::GameInfo;
 use crate::utils::fn_utils::apply_with;
@@ -17,16 +17,17 @@ use crate::utils::fn_utils::apply_with;
 ///
 /// __question_iterator__ : question list iterator
 pub struct EventEmitters<'a> {
-    pub state_changes: UnboundedSender<StateChange>,
+    pub state_changes: UnboundedSender<StateChangeWrapper<'a>>,
     pub question_iterator: Iter<'a, Messages>,
 }
 
-impl<'a> EventEmitters<'a> {
+impl EventEmitters<'static> {
     /// ## On game started
     ///
     /// __game_info__ : shared game info
     pub async fn on_game_started(&mut self, game_info: &mut GameInfo) -> Result<(), CustomError> {
         // send StateChange Start event
+
         self.state_changes.send(StateChange::start())?;
 
         // try to find and emit next question

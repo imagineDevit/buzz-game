@@ -39,75 +39,98 @@ pub struct StateChange {
 }
 
 impl StateChange {
-    pub fn start() -> Self {
-        Self {
+    pub fn start() -> StateChangeWrapper<'static> {
+        StateChange {
             change_type: StateChangeType::GameStart,
             message: Messages::None,
             players: vec![],
             required_nb_players: 0,
         }
+        .into()
     }
 
-    pub fn end() -> Self {
-        Self {
+    pub fn end() -> StateChangeWrapper<'static> {
+        StateChange {
             change_type: StateChangeType::GameEnd,
             message: Messages::None,
             players: vec![],
             required_nb_players: 0,
         }
+        .into()
     }
 
-    pub fn with_can_buzz(can_buzz: bool) -> Self {
-        Self {
+    pub fn with_can_buzz(can_buzz: bool) -> StateChangeWrapper<'static> {
+        StateChange {
             change_type: StateChangeType::CanBuzz,
             message: Messages::CanBuzz { can_buzz },
             players: vec![],
             required_nb_players: 0,
         }
+        .into()
     }
 
-    pub fn with_score(score: Messages, players: Vec<String>, required_nb_players: u8) -> Self {
-        Self {
+    pub fn with_score(
+        score: Messages,
+        players: Vec<String>,
+        required_nb_players: u8,
+    ) -> StateChangeWrapper<'static> {
+        StateChange {
             change_type: StateChangeType::NewPlayerScore,
             message: score,
             players,
             required_nb_players,
         }
+        .into()
     }
 
-    pub fn with_question(question: Messages) -> Self {
-        Self {
+    pub fn with_question(question: Messages) -> StateChangeWrapper<'static> {
+        StateChange {
             change_type: StateChangeType::NewQuestion,
             message: question,
             players: vec![],
             required_nb_players: 0,
         }
+        .into()
     }
 
-    pub fn with_buzz(buzz: Messages) -> Self {
-        Self {
+    pub fn with_buzz(buzz: Messages) -> StateChangeWrapper<'static> {
+        StateChange {
             change_type: StateChangeType::NewBuzz,
             message: buzz,
             players: vec![],
             required_nb_players: 0,
         }
+        .into()
     }
 
-    pub fn with_answer(answer: Messages) -> Self {
-        Self {
+    pub fn with_answer(answer: Messages) -> StateChangeWrapper<'static> {
+        StateChange {
             change_type: StateChangeType::NewAnswer,
             message: answer,
             players: vec![],
             required_nb_players: 0,
         }
+        .into()
     }
 
-    pub fn with_error(msg: String) -> Self {
-        Self {
+    pub fn with_error(msg: String) -> StateChangeWrapper<'static> {
+        StateChange {
             change_type: StateChangeType::Error,
             message: Messages::Error { message: msg },
             players: vec![],
             required_nb_players: 0,
         }
+        .into()
+    }
+}
+
+#[derive(Serialize, Debug, Clone, Copy)]
+pub struct StateChangeWrapper<'a> {
+    pub state: &'a StateChange,
+}
+
+impl<'a> From<StateChange> for StateChangeWrapper<'a> {
+    fn from(state: StateChange) -> Self {
+        Self { state: &state }
     }
 }

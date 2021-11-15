@@ -1,26 +1,21 @@
 #![allow(dead_code)]
 
 use std::collections::HashSet;
-use std::convert::Infallible;
-use std::ops::Deref;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
-use futures_util::Stream;
 use rand::seq::SliceRandom;
 use tokio::sync::Mutex;
-use tokio_stream::wrappers::BroadcastStream;
 use tokio_stream::wrappers::UnboundedReceiverStream;
 use tokio_stream::StreamExt;
-use warp::sse::Event;
-use warp::{sse, Filter, Reply};
+use warp::Filter;
 
 use data::db::*;
 
 use crate::config::app::init_config;
 use crate::data::repositories::{PlayerRepository, SearchAttributes};
 use crate::dto::messages::{Answer, Messages};
-use crate::dto::states::StateChange;
+use crate::dto::states::{StateChange, StateChangeWrapper};
 use crate::errors::error::CustomError;
 use crate::event::emitters::EventEmitters;
 use crate::event::internal_events::InternalEvent;
@@ -58,7 +53,7 @@ async fn main() -> Result<(), CustomError> {
 
     // Instanciation of unbounded channels for events sending/receiving
     let (state_change_sender, state_change_receiver) =
-        tokio::sync::mpsc::unbounded_channel::<StateChange>();
+        tokio::sync::mpsc::unbounded_channel::<StateChangeWrapper<'static>>();
 
     let (internal_event_sender, internal_event_receiver) =
         tokio::sync::mpsc::unbounded_channel::<InternalEvent>();
@@ -151,11 +146,15 @@ async fn main() -> Result<(), CustomError> {
     });
 
     // web
+    let state_changes_stream = Arc::new(Mutex::new(UnboundedReceiverStream::new(
+        state_change_receiver,
+    )));
 
-    let _state_changes_stream = UnboundedReceiverStream::new(state_change_receiver);
+    let s = state_changes_stream.lock().await.map(|_| "");
 
     warp::serve(
-        Routes::add_player(service.clone())
+        Routes::send_events(state_changes_stream)
+            .or(Routes::add_player(service.clone()))
             .or(Routes::register_buzz(service.clone()))
             .or(Routes::register_answer(service.clone()))
             .with(warp::cors().allow_any_origin())
@@ -165,17 +164,6 @@ async fn main() -> Result<(), CustomError> {
     .await;
 
     Ok(())
-}
-
-fn sse_state(state: StateChange) -> Result<Event, Infallible> {
-    let s = serde_json::to_string(&state).unwrap();
-    Ok(sse::Event::default().data(s))
-}
-
-fn stream_state(
-    stream: BroadcastStream<StateChange>,
-) -> impl Stream<Item = Result<Event, Infallible>> + Send + 'static {
-    stream.map(|state| sse_state(state.unwrap()))
 }
 
 fn list_of_questions() -> Vec<Messages> {
