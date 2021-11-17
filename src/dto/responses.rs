@@ -14,7 +14,7 @@ use serde::Serialize;
 #[derive(Serialize, Debug)]
 #[serde(tag = "type", rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum Response {
-    Error { message: String },
+    Error { message: String, code: u16 },
     GameStarted,
     PlayerAdded,
     BuzzRegistered,

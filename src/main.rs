@@ -1,24 +1,19 @@
 #![allow(dead_code)]
 
 use std::collections::HashSet;
-use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
 use rand::seq::SliceRandom;
 use tokio::sync::Mutex;
-use tokio_stream::wrappers::UnboundedReceiverStream;
-use tokio_stream::StreamExt;
 use warp::Filter;
 
 use data::db::*;
 
 use crate::config::app::init_config;
-use crate::data::repositories::{PlayerRepository, SearchAttributes};
+use crate::data::repositories::PlayerRepository;
 use crate::dto::messages::{Answer, Messages};
-use crate::dto::states::{StateChange, StateChangeWrapper};
+use crate::dto::states::StateChange;
 use crate::errors::error::CustomError;
-use crate::event::emitters::EventEmitters;
-use crate::event::internal_events::InternalEvent;
 use crate::game_info::GameInfo;
 use crate::services::buzz_services::BuzzService;
 use crate::web::routes::Routes;
@@ -27,7 +22,6 @@ mod config;
 mod data;
 mod dto;
 mod errors;
-mod event;
 mod game_info;
 mod services;
 mod utils;
@@ -48,115 +42,16 @@ async fn main() -> Result<(), CustomError> {
         let _ = data::db::init_db(&connection).await.unwrap();
     });
 
-    // Instantiate the game_info bean
-    let mut game_info = GameInfo::default();
-
-    // Instanciation of unbounded channels for events sending/receiving
-    let (state_change_sender, state_change_receiver) =
-        tokio::sync::mpsc::unbounded_channel::<StateChangeWrapper<'static>>();
-
-    let (internal_event_sender, internal_event_receiver) =
-        tokio::sync::mpsc::unbounded_channel::<InternalEvent>();
-
-    // Instanciation of application beans
-    let repository = PlayerRepository::new(db_pool.clone());
+    let game_info = Arc::new(Mutex::new(GameInfo::new(list_of_questions())));
 
     let service = Arc::new(Mutex::new(BuzzService {
-        tx: internal_event_sender,
-        repository: repository.clone(),
+        repository: PlayerRepository::new(db_pool.clone()),
     }));
 
-    // handle internal events
-    let repositry_clone = repository.clone();
-
-    let mut internal_events_stream = UnboundedReceiverStream::new(internal_event_receiver);
-
-    let started = game_info.started.clone();
-    let buzzed = game_info.buzzed.clone();
-
-    tokio::spawn(async move {
-        let questions = list_of_questions();
-
-        let mut emitters = EventEmitters {
-            state_changes: state_change_sender,
-            question_iterator: questions.iter(),
-        };
-
-        loop {
-            while let Some(internal_event) = internal_events_stream.next().await {
-                let p = game_info
-                    .players
-                    .clone()
-                    .into_iter()
-                    .collect::<Vec<String>>();
-
-                match internal_event {
-                    InternalEvent::PlayerAdded(score) => {
-                        if !started.lock().await.load(Ordering::Relaxed) {
-                            if let Messages::PlayerScore { player_name, .. } = score.clone() {
-                                let ready = game_info.add_player(player_name).await;
-
-                                emitters
-                                    .emit_score(score, p.clone(), game_info.min_players)
-                                    .unwrap();
-
-                                if ready {
-                                    emitters.on_game_started(&mut game_info).await.unwrap();
-                                }
-                            }
-                        }
-                    }
-
-                    InternalEvent::BuzzRegistered(player_name) => {
-                        if !buzzed.lock().await.load(Ordering::Relaxed) {
-                            emitters
-                                .on_buzz_registered(player_name, &mut game_info)
-                                .await
-                                .unwrap();
-                        }
-                    }
-
-                    InternalEvent::AnswerRegistered {
-                        player_name,
-                        answer_number,
-                    } => {
-                        match repositry_clone
-                            .find_by(SearchAttributes::Name(player_name))
-                            .await
-                        {
-                            Ok(Some(p)) => {
-                                emitters
-                                    .on_answer_registered(
-                                        answer_number,
-                                        p.clone(),
-                                        |(name, points)| {
-                                            repositry_clone.update_score(name, p.score + points)
-                                        },
-                                        &mut game_info,
-                                    )
-                                    .await
-                                    .unwrap();
-                            }
-                            _ => {}
-                        }
-                    }
-                }
-            }
-        }
-    });
-
-    // web
-    let state_changes_stream = Arc::new(Mutex::new(UnboundedReceiverStream::new(
-        state_change_receiver,
-    )));
-
-    let s = state_changes_stream.lock().await.map(|_| "");
-
     warp::serve(
-        Routes::send_events(state_changes_stream)
-            .or(Routes::add_player(service.clone()))
-            .or(Routes::register_buzz(service.clone()))
-            .or(Routes::register_answer(service.clone()))
+        Routes::add_player(service.clone(), game_info.clone())
+            .or(Routes::register_buzz(service.clone(), game_info.clone()))
+            .or(Routes::register_answer(service.clone(), game_info.clone()))
             .with(warp::cors().allow_any_origin())
             .recover(crate::web::exception_handlers::handle_error),
     )
@@ -349,6 +244,5 @@ fn list_of_questions() -> Vec<Messages> {
     ];
 
     q.shuffle(&mut rand::thread_rng());
-
     q
 }
