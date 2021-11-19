@@ -1,8 +1,8 @@
-use rand::{thread_rng, Rng};
 use std::collections::HashMap;
-use std::ops::Range;
 use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 use std::sync::Arc;
+use std::vec::IntoIter;
+
 use tokio::sync::mpsc::UnboundedSender;
 use tokio::sync::Mutex;
 
@@ -19,8 +19,7 @@ pub struct GameInfo {
     pub number_of_players: AtomicU8,
     pub current_question: Option<(Messages, Answer)>,
     pub senders: Arc<Mutex<HashMap<String, UnboundedSender<StateChange>>>>,
-    pub questions: Vec<Messages>,
-    pub already_called: Vec<usize>,
+    pub questions_iterator: IntoIter<Messages>,
 }
 
 impl GameInfo {
@@ -34,8 +33,7 @@ impl GameInfo {
             number_of_players: AtomicU8::new(0),
             current_question: None,
             senders: Arc::new(Mutex::new(HashMap::new())),
-            already_called: vec![],
-            questions,
+            questions_iterator: questions.into_iter(),
         }
     }
 
@@ -126,31 +124,18 @@ impl GameInfo {
     }
 
     pub async fn next_question(&mut self) {
-        let qs = self.questions.clone();
-
-        let mut i = 100;
-
-        while i > qs.len() || self.already_called.contains(&i) {
-            i = thread_rng().gen_range(Range {
-                start: 0,
-                end: self.questions.len(),
-            });
-        }
-
-        let qst = qs.get(i);
-
         return if let Some(Messages::Question {
             number,
             label,
             points,
             answers,
             ..
-        }) = qst
+        }) = self.questions_iterator.next()
         {
             let q = Messages::Question {
-                number: *number,
+                number,
                 label: String::from(label.as_str()),
-                points: *points,
+                points,
                 answers: answers.clone(),
             };
 
@@ -181,12 +166,14 @@ impl GameInfo {
 
 #[cfg(test)]
 mod game_info_tests {
+    use std::collections::HashSet;
+    use std::sync::atomic::Ordering;
+
+    use rstest::*;
+
     use crate::dto::messages::{Answer, Messages};
     use crate::game_info::GameInfo;
     use crate::StateChange;
-    use rstest::*;
-    use std::collections::HashSet;
-    use std::sync::atomic::Ordering;
 
     #[fixture]
     fn default_game_info() -> GameInfo {

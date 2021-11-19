@@ -93,7 +93,10 @@ mod responses_tests {
 
     #[fixture(msg = "error occurred".to_string())]
     fn error_response(msg: String) -> Response {
-        Response::Error { message: msg }
+        Response::Error {
+            message: msg,
+            code: 500,
+        }
     }
 
     #[rstest(error_json as json)]
@@ -105,7 +108,6 @@ mod responses_tests {
 
     #[rstest]
     #[case("GAME_STARTED".to_string(), Response::GameStarted)]
-    #[case("PLAYER_ADDED".to_string(), Response::PlayerAdded)]
     #[case("BUZZ_REGISTERED".to_string(), Response::BuzzRegistered)]
     #[case("ANSWER_REGISTERED".to_string(), Response::AnswerRegistered)]
     #[trace]

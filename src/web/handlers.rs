@@ -1,5 +1,6 @@
 use std::convert::Infallible;
 use std::sync::Arc;
+use std::time::Duration;
 
 use tokio::sync::Mutex;
 use tokio_stream::wrappers::UnboundedReceiverStream;
@@ -8,7 +9,8 @@ use warp::sse::Event;
 use warp::{reject, sse, Rejection};
 
 use crate::dto::requests::{AddPlayerQuery, Requests};
-use crate::{BuzzService, GameInfo, StateChange};
+use crate::dto::responses::Response;
+use crate::{BuzzService, GameInfo, Messages, StateChange};
 
 pub struct BuzzHandlers {}
 
@@ -20,10 +22,10 @@ impl BuzzHandlers {
     ) -> Result<impl warp::Reply, Rejection> {
         let (tx, rx) = tokio::sync::mpsc::unbounded_channel::<StateChange>();
 
-        let _ = service
+        let resp = service
             .lock()
             .await
-            .add_player(query.to_request(), game_info, tx)
+            .add_player(query.to_request(), game_info.clone(), tx)
             .await
             .map_err(|e| reject::custom(e))?;
 
@@ -33,6 +35,22 @@ impl BuzzHandlers {
             let data = serde_json::to_string(&state).unwrap();
             Ok::<Event, Infallible>(sse::Event::default().data(data))
         });
+
+        if let Response::PlayerAdded(ready) = resp {
+            if ready {
+                let g_i = game_info.clone();
+
+                tokio::spawn(async move {
+                    // start the game by sending starting message
+                    g_i.lock().await.send(Messages::None, true).await;
+
+                    std::thread::sleep(Duration::from_secs(1));
+
+                    // send next question
+                    g_i.lock().await.next_question().await;
+                });
+            }
+        }
 
         Ok(sse::reply(sse::keep_alive().stream(stream)))
     }
@@ -45,7 +63,7 @@ impl BuzzHandlers {
         let resp = service
             .lock()
             .await
-            .register_buzz(request, game_info)
+            .register_buzz(request, game_info.clone())
             .await
             .map_err(|e| reject::custom(e))?;
 
@@ -60,10 +78,21 @@ impl BuzzHandlers {
         let resp = service
             .lock()
             .await
-            .register_answer(request, game_info)
+            .register_answer(request, game_info.clone())
             .await
             .map_err(|e| reject::custom(e))?;
 
-        Ok(warp::reply::json(&resp))
+        let g_i = game_info.clone();
+
+        tokio::spawn(async move {
+            // send updated score
+            if let Response::ScoreUpdated(score) = resp {
+                g_i.lock().await.send(score, false).await;
+            }
+            //send next question
+            g_i.lock().await.next_question().await;
+        });
+
+        Ok(warp::reply::json(&Response::AnswerRegistered))
     }
 }

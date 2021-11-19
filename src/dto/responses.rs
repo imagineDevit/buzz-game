@@ -1,3 +1,4 @@
+use crate::Messages;
 use serde::Serialize;
 
 /// ##Response representation
@@ -16,7 +17,8 @@ use serde::Serialize;
 pub enum Response {
     Error { message: String, code: u16 },
     GameStarted,
-    PlayerAdded,
+    PlayerAdded(bool),
     BuzzRegistered,
+    ScoreUpdated(Messages),
     AnswerRegistered,
 }
