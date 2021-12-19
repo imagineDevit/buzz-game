@@ -31,7 +31,7 @@ pub enum StateChangeType {
 pub struct StateChange {
     #[serde(rename = "type")]
     pub change_type: StateChangeType,
-    #[serde(skip_serializing_if = "Messages::is_none")]
+    //#[serde(skip_serializing_if = "Messages::is_none")]
     pub message: Messages,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub players: Vec<String>,
@@ -39,12 +39,12 @@ pub struct StateChange {
 }
 
 impl StateChange {
-    pub fn start() -> Self {
+    pub fn start(players: Vec<String>, required_nb_players: u8) -> Self {
         Self {
             change_type: StateChangeType::GameStart,
-            message: Messages::None,
-            players: vec![],
-            required_nb_players: 0,
+            message: Messages::GameStart,
+            players,
+            required_nb_players,
         }
     }
 

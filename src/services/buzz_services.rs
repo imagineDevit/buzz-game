@@ -50,15 +50,12 @@ impl BuzzService {
 
                 // send initial player score
                 game_info
-                    .send(
-                        Messages::PlayerScore {
+                    .send(Messages::PlayerScore {
                             player_name: name.clone(),
                             score: 0,
                             good_answer: String::default(),
                             update: false,
-                        },
-                        false,
-                    )
+                        })
                     .await;
 
                 // return PlayerAdded response
@@ -102,12 +99,9 @@ impl BuzzService {
 
                 // send buzz message
                 game_info
-                    .send(
-                        Messages::Buzz {
+                    .send(Messages::Buzz {
                             author: player_name,
-                        },
-                        false,
-                    )
+                        })
                     .await;
 
                 // return BuzzRegistered response
@@ -169,17 +163,14 @@ impl BuzzService {
                                 |good| async move {
                                     // send StateChange WithAnswer event
                                     game_info
-                                        .send(
-                                            Messages::PlayerAnswer {
+                                        .send(Messages::PlayerAnswer {
                                                 player_name: player_name.clone(),
                                                 answer: Answer {
                                                     number: answer_number,
                                                     label: label.clone(),
                                                     good: good.clone(),
                                                 },
-                                            },
-                                            false,
-                                        )
+                                            })
                                         .await;
 
                                     // if the given answer is the good one

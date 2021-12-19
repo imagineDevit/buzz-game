@@ -52,7 +52,22 @@ async fn main() -> Result<(), CustomError> {
         Routes::add_player(service.clone(), game_info.clone())
             .or(Routes::register_buzz(service.clone(), game_info.clone()))
             .or(Routes::register_answer(service.clone(), game_info.clone()))
-            .with(warp::cors().allow_any_origin())
+            .with(
+                warp::cors()
+                    .allow_any_origin()
+                    .allow_methods(vec!["POST", "GET", "OPTIONS"])
+                    .allow_headers(vec![
+                        "Accept",
+                        "User-Agent",
+                        "Sec-Fetch-Mode",
+                        "Referer",
+                        "Origin",
+                        "Access-Control-Request-Method",
+                        "Access-Control-Request-Headers",
+                        "Access-Control-Allow-Origin",
+                        "Content-type",
+                    ]),
+            )
             .recover(crate::web::exception_handlers::handle_error),
     )
     .run(([127, 0, 0, 1], 3030))

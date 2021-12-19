@@ -79,7 +79,7 @@ impl GameInfo {
         if !self.buzzed.load(Ordering::Relaxed) {
             self.buzzed.store(true, Ordering::Relaxed);
             self.buzz_author = Some(author);
-            self.send(Messages::CanBuzz { can_buzz: false }, false)
+            self.send(Messages::CanBuzz { can_buzz: false })
                 .await;
             return true;
         }
@@ -89,10 +89,10 @@ impl GameInfo {
     pub async fn release_buzz(&mut self) {
         self.buzzed.store(false, Ordering::Relaxed);
         self.buzz_author = None;
-        self.send(Messages::CanBuzz { can_buzz: true }, false).await;
+        self.send(Messages::CanBuzz { can_buzz: true }).await;
     }
 
-    pub async fn send(&self, message: Messages, start: bool) {
+    pub async fn send(&self, message: Messages) {
         let senders = self.senders.lock().await;
         let players = senders
             .keys()
@@ -110,13 +110,8 @@ impl GameInfo {
                 }
                 Messages::CanBuzz { can_buzz } => StateChange::with_can_buzz(can_buzz),
                 Messages::Error { message } => StateChange::with_error(message.clone()),
-                Messages::None => {
-                    return if start {
-                        StateChange::start();
-                    } else {
-                        StateChange::end();
-                    }
-                }
+                Messages::GameStart => StateChange::start(players.clone(), self.min_players),
+                Messages::None => StateChange::end()
             };
 
             tx.send(s).unwrap();
@@ -141,13 +136,13 @@ impl GameInfo {
 
             self.release_buzz().await;
 
-            self.send(q.clone(), false).await;
+            self.send(q.clone()).await;
 
             if let Some(g_answer) = answers.into_iter().filter(|a| a.good).next() {
                 self.load_current_question(q, g_answer.clone());
             }
         } else {
-            self.send(Messages::None, false).await;
+            self.send(Messages::None).await;
         };
     }
 

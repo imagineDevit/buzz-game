@@ -42,7 +42,7 @@ impl BuzzHandlers {
 
                 tokio::spawn(async move {
                     // start the game by sending starting message
-                    g_i.lock().await.send(Messages::None, true).await;
+                    g_i.lock().await.send(Messages::GameStart).await;
 
                     std::thread::sleep(Duration::from_secs(1));
 
@@ -87,8 +87,9 @@ impl BuzzHandlers {
         tokio::spawn(async move {
             // send updated score
             if let Response::ScoreUpdated(score) = resp {
-                g_i.lock().await.send(score, false).await;
+                g_i.lock().await.send(score).await;
             }
+
             //send next question
             g_i.lock().await.next_question().await;
         });

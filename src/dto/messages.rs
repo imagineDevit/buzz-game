@@ -109,6 +109,8 @@ pub enum Messages {
         message: String,
     },
 
+    GameStart,
+
     None,
 }
 
