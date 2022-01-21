@@ -1,0 +1,8 @@
+app:
+  name: buzz-game
+  db:
+    username: hsedjame
+    password: postgres
+    host: localhost
+    port: 5432
+    database: postgres
